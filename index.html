@@ -1,0 +1,984 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Resume Parser & Analyzer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid #dee2e6;
+            padding: 0 40px;
+            background: #f8f9fa;
+        }
+
+        .tab {
+            padding: 15px 25px;
+            cursor: pointer;
+            font-weight: bold;
+            color: #495057;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s;
+        }
+
+        .tab.active {
+            color: #4facfe;
+            border-bottom-color: #4facfe;
+            background: #fff;
+        }
+
+        .tab-content {
+            display: none;
+            padding: 40px;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+            align-items: start;
+        }
+
+        .tab-content.active {
+            display: grid;
+        }
+
+        .upload-section {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 30px;
+            border: 2px dashed #dee2e6;
+            transition: all 0.3s ease;
+        }
+
+        .upload-section:hover {
+            border-color: #4facfe;
+            background: #f0f8ff;
+        }
+
+        .upload-section h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+        }
+
+        .file-input-container {
+            position: relative;
+            margin-bottom: 20px;
+        }
+
+        .file-input {
+            opacity: 0;
+            position: absolute;
+            z-index: -1;
+        }
+
+        .file-input-label {
+            display: block;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 10px;
+            cursor: pointer;
+            text-align: center;
+            transition: transform 0.2s;
+            font-weight: bold;
+        }
+
+        .file-input-label:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .upload-btn {
+            width: 100%;
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: white;
+            border: none;
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 1.1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .upload-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(17, 153, 142, 0.4);
+        }
+
+        .upload-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .results-section {
+            background: #fff;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        .results-section h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+            border-bottom: 2px solid #4facfe;
+            padding-bottom: 10px;
+        }
+
+        .extracted-data {
+            display: none;
+        }
+
+        .data-grid {
+            display: grid;
+            gap: 15px;
+        }
+
+        .data-item {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #4facfe;
+        }
+
+        .data-label {
+            font-weight: bold;
+            color: #555;
+            margin-bottom: 5px;
+        }
+
+        .data-value {
+            color: #333;
+            font-size: 1.1em;
+        }
+
+        .download-section {
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        .download-btn {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ffa500 100%);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s;
+            text-decoration: none;
+            display: inline-block;
+            margin: 5px;
+        }
+
+        .download-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255, 107, 107, 0.4);
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #4facfe;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error {
+            color: #dc3545;
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            border-radius: 5px;
+            padding: 10px;
+            margin: 10px 0;
+        }
+
+        .success {
+            color: #155724;
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            border-radius: 5px;
+            padding: 10px;
+            margin: 10px 0;
+        }
+
+        .search-section {
+            margin-bottom: 20px;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 1em;
+            margin-bottom: 10px;
+        }
+
+        .search-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .search-btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .stat-card {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .stat-value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #4facfe;
+            margin: 10px 0;
+        }
+
+        .stat-label {
+            color: #666;
+        }
+
+        .resume-list {
+            margin-top: 20px;
+        }
+
+        .resume-item {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            border-left: 4px solid #4facfe;
+        }
+
+        .resume-item h4 {
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .resume-meta {
+            color: #666;
+            font-size: 0.9em;
+            margin-bottom: 5px;
+        }
+
+        @media (max-width: 768px) {
+            .tab-content {
+                grid-template-columns: 1fr;
+                gap: 20px;
+                padding: 20px;
+            }
+            
+            .header {
+                padding: 20px;
+            }
+            
+            .header h1 {
+                font-size: 2em;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 AI Resume Parser & Analyzer</h1>
+            <p>Extract structured data from resumes using advanced AI and semantic search</p>
+        </div>
+
+        <div class="tabs">
+            <div class="tab active" onclick="switchTab('parse')">Parse Resumes</div>
+            <div class="tab" onclick="switchTab('search')">Search Database</div>
+            <div class="tab" onclick="switchTab('stats')">Statistics</div>
+        </div>
+
+        <!-- Parse Tab -->
+        <div id="parse-tab" class="tab-content active">
+            <div class="upload-section">
+                <h2>📄 Upload Resume</h2>
+                <div class="file-input-container">
+                    <input type="file" id="resumeFile" class="file-input" accept=".pdf,.doc,.docx,.txt" multiple>
+                    <label for="resumeFile" class="file-input-label">
+                        Choose Resume Files (PDF, DOC, DOCX, TXT)
+                    </label>
+                </div>
+                <div id="fileInfo"></div>
+                <button onclick="processResumes()" id="processBtn" class="upload-btn">
+                    🔍 Process & Extract Data
+                </button>
+            </div>
+
+            <div class="results-section">
+                <h2>📊 Extracted Information</h2>
+                <div id="results">
+                    <p style="color: #666; text-align: center; padding: 40px;">
+                        Upload and process resumes to see extracted data here
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Search Tab -->
+        <div id="search-tab" class="tab-content">
+            <div style="grid-column: span 2;">
+                <div class="search-section">
+                    <input type="text" id="searchQuery" class="search-input" placeholder="Search by name, skills, or keywords">
+                    <button onclick="searchResumes()" class="search-btn">🔍 Search Resumes</button>
+                    <button onclick="advancedSearch()" class="download-btn">🔎 Advanced Search</button>
+                </div>
+                <div id="searchResults" class="resume-list">
+                    <p style="color: #666; text-align: center; padding: 40px;">
+                        Enter a search query to find resumes in the database
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stats Tab -->
+        <div id="stats-tab" class="tab-content">
+            <div style="grid-column: span 2;">
+                <h2>📈 Resume Database Statistics</h2>
+                <div class="stats-grid" id="statsContainer">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        <p>Loading statistics...</p>
+                    </div>
+                </div>
+                
+                <h2 style="margin-top: 30px;">📅 Recently Processed Resumes</h2>
+                <div id="recentResumes" class="resume-list">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        <p>Loading recent resumes...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let processedData = [];
+
+        // Initialize the stats tab when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            loadStats();
+            loadRecentResumes();
+        });
+
+        function switchTab(tabName) {
+            // Hide all tab contents
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Deactivate all tabs
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Activate selected tab
+            document.getElementById(`${tabName}-tab`).classList.add('active');
+            document.querySelector(`.tab[onclick="switchTab('${tabName}')"]`).classList.add('active');
+            
+            // Refresh data if needed
+            if (tabName === 'stats') {
+                loadStats();
+                loadRecentResumes();
+            }
+        }
+
+        document.getElementById('resumeFile').addEventListener('change', function(e) {
+            const files = e.target.files;
+            const fileInfo = document.getElementById('fileInfo');
+            
+            if (files.length > 0) {
+                let info = `<div class="success">Selected ${files.length} file(s):<br>`;
+                for (let i = 0; i < files.length; i++) {
+                    info += `• ${files[i].name}<br>`;
+                }
+                info += '</div>';
+                fileInfo.innerHTML = info;
+            }
+        });
+
+        async function processResumes() {
+            const fileInput = document.getElementById('resumeFile');
+            const files = fileInput.files;
+            
+            if (files.length === 0) {
+                alert('Please select at least one resume file');
+                return;
+            }
+
+            const resultsDiv = document.getElementById('results');
+            const processBtn = document.getElementById('processBtn');
+            
+            processBtn.disabled = true;
+            processBtn.textContent = 'Processing...';
+            
+            resultsDiv.innerHTML = `
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>Processing resumes with AI...</p>
+                </div>
+            `;
+
+            try {
+                processedData = [];
+                
+                for (let i = 0; i < files.length; i++) {
+                    const formData = new FormData();
+                    formData.append('resume', files[i]);
+                    
+                    const response = await fetch('/api/parse-resume', {
+                        method: 'POST',
+                        body: formData
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    
+                    const data = await response.json();
+                    processedData.push(data);
+                }
+                
+                displayResults(processedData);
+                
+            } catch (error) {
+                console.error('Error:', error);
+                resultsDiv.innerHTML = `
+                    <div class="error">
+                        Error processing resumes: ${error.message}
+                    </div>
+                `;
+            } finally {
+                processBtn.disabled = false;
+                processBtn.textContent = '🔍 Process & Extract Data';
+            }
+        }
+
+        function displayResults(data) {
+            const resultsDiv = document.getElementById('results');
+            
+            let html = '';
+            
+            data.forEach((resume, index) => {
+                html += `
+                    <div class="data-grid" style="margin-bottom: 30px; border-bottom: 1px solid #eee; padding-bottom: 20px;">
+                        <h3 style="color: #4facfe; margin-bottom: 15px;">Resume ${index + 1}</h3>
+                        
+                        <div class="data-item">
+                            <div class="data-label">Name:</div>
+                            <div class="data-value">${resume.name || 'Not found'}</div>
+                        </div>
+                        
+                        <div class="data-item">
+                            <div class="data-label">Email:</div>
+                            <div class="data-value">${resume.email || 'Not found'}</div>
+                        </div>
+                        
+                        <div class="data-item">
+                            <div class="data-label">Phone:</div>
+                            <div class="data-value">${resume.phone || 'Not found'}</div>
+                        </div>
+                        
+                        <div class="data-item">
+                            <div class="data-label">Location:</div>
+                            <div class="data-value">${resume.location || 'Not found'}</div>
+                        </div>
+                        
+                        <div class="data-item">
+                            <div class="data-label">Education:</div>
+                            <div class="data-value">${resume.education || 'Not found'}</div>
+                        </div>
+                        
+                        <div class="data-item">
+                            <div class="data-label">Skills:</div>
+                            <div class="data-value">${Array.isArray(resume.skills) ? resume.skills.join(', ') : (resume.skills || 'Not found')}</div>
+                        </div>
+                        
+                        <div class="data-item">
+                            <div class="data-label">Years of Experience:</div>
+                            <div class="data-value">${resume.experience || 'Not found'}</div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            html += `
+                <div class="download-section">
+                    <button onclick="downloadExcel()" class="download-btn">
+                        📥 Download Excel Report
+                    </button>
+                    <button onclick="viewInDatabase()" class="download-btn" style="background: linear-gradient(135deg, #9c88ff 0%, #8c7ae6 100%);">
+                        🗃️ View in Database
+                    </button>
+                </div>
+            `;
+            
+            resultsDiv.innerHTML = html;
+        }
+
+        async function downloadExcel() {
+            if (processedData.length === 0) {
+                alert('No data to export');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/export-excel', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ data: processedData })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                a.download = 'resume_data.xlsx';
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                
+            } catch (error) {
+                console.error('Error downloading Excel file:', error);
+                alert('Error downloading Excel file: ' + error.message);
+            }
+        }
+
+        function viewInDatabase() {
+            switchTab('search');
+            // Optionally pre-fill search with the processed names
+            if (processedData.length > 0 && processedData[0].name) {
+                document.getElementById('searchQuery').value = processedData[0].name;
+                searchResumes();
+            }
+        }
+
+        async function searchResumes() {
+            const query = document.getElementById('searchQuery').value.trim();
+            const resultsDiv = document.getElementById('searchResults');
+            
+            if (!query) {
+                alert('Please enter a search query');
+                return;
+            }
+
+            resultsDiv.innerHTML = `
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>Searching database...</p>
+                </div>
+            `;
+
+            try {
+                // First try text search
+                const response = await fetch('/api/resumes/text-search', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ text: query, limit: 10 })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                displaySearchResults(data.results);
+                
+            } catch (error) {
+                console.error('Error searching resumes:', error);
+                resultsDiv.innerHTML = `
+                    <div class="error">
+                        Error searching resumes: ${error.message}
+                    </div>
+                `;
+            }
+        }
+
+        async function advancedSearch() {
+            const query = document.getElementById('searchQuery').value.trim();
+            const resultsDiv = document.getElementById('searchResults');
+            
+            if (!query) {
+                alert('Please enter a search query');
+                return;
+            }
+
+            resultsDiv.innerHTML = `
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>Performing advanced search...</p>
+                </div>
+            `;
+
+            try {
+                // First try semantic search
+                const semanticResponse = await fetch('/api/semantic-search', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ query: query })
+                });
+
+                if (!semanticResponse.ok) {
+                    throw new Error(`HTTP error! status: ${semanticResponse.status}`);
+                }
+
+                const semanticData = await semanticResponse.json();
+                
+                if (semanticData.results && semanticData.results.length > 0) {
+                    // Get full documents for the top matches
+                    const ids = semanticData.results.map(r => r.index);
+                    const fullDocsResponse = await fetch('/api/resumes/search', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ 
+                            query: { 
+                                "_id": { "$in": ids.map(id => resume_texts[id]._id) } 
+                            },
+                            limit: 10 
+                        })
+                    });
+                    
+                    const fullDocs = await fullDocsResponse.json();
+                    displaySearchResults(fullDocs.results);
+                } else {
+                    // Fall back to regular search
+                    await searchResumes();
+                }
+                
+            } catch (error) {
+                console.error('Error in advanced search:', error);
+                resultsDiv.innerHTML = `
+                    <div class="error">
+                        Error in advanced search: ${error.message}
+                    </div>
+                `;
+            }
+        }
+
+        function displaySearchResults(results) {
+            const resultsDiv = document.getElementById('searchResults');
+            
+            if (!results || results.length === 0) {
+                resultsDiv.innerHTML = `
+                    <div class="error">
+                        No matching resumes found in the database
+                    </div>
+                `;
+                return;
+            }
+
+            let html = '';
+            
+            results.forEach((resume, index) => {
+                const parsed = resume.parsed_data || {};
+                html += `
+                    <div class="resume-item">
+                        <h4>${parsed.name || 'Unnamed Resume'}</h4>
+                        <div class="resume-meta">
+                            ${parsed.email ? parsed.email + ' • ' : ''}
+                            ${parsed.phone ? parsed.phone + ' • ' : ''}
+                            ${resume.metadata?.filename || ''}
+                        </div>
+                        <div class="data-value">
+                            ${parsed.skills ? parsed.skills.slice(0, 3).join(', ') : ''}
+                            ${parsed.skills && parsed.skills.length > 3 ? '...' : ''}
+                        </div>
+                        <div style="margin-top: 10px;">
+                            <button onclick="viewResumeDetails('${resume._id}')" class="download-btn" style="padding: 8px 15px; font-size: 0.9em;">
+                                View Details
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            resultsDiv.innerHTML = html;
+        }
+
+        async function viewResumeDetails(resumeId) {
+            try {
+                const response = await fetch('/api/resumes/search', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ 
+                        query: { "_id": resumeId },
+                        limit: 1 
+                    })
+                });
+
+                const data = await response.json();
+                if (data.results && data.results.length > 0) {
+                    const resume = data.results[0];
+                    const parsed = resume.parsed_data || {};
+                    
+                    let html = `
+                        <div class="data-grid">
+                            <h3 style="color: #4facfe; margin-bottom: 15px; grid-column: span 2;">Resume Details</h3>
+                            
+                            <div class="data-item">
+                                <div class="data-label">Filename:</div>
+                                <div class="data-value">${resume.metadata?.filename || 'Unknown'}</div>
+                            </div>
+                            
+                            <div class="data-item">
+                                <div class="data-label">Upload Date:</div>
+                                <div class="data-value">${new Date(resume.metadata?.upload_date).toLocaleString() || 'Unknown'}</div>
+                            </div>
+                            
+                            <div class="data-item">
+                                <div class="data-label">Name:</div>
+                                <div class="data-value">${parsed.name || 'Not found'}</div>
+                            </div>
+                            
+                            <div class="data-item">
+                                <div class="data-label">Email:</div>
+                                <div class="data-value">${parsed.email || 'Not found'}</div>
+                            </div>
+                            
+                            <div class="data-item">
+                                <div class="data-label">Phone:</div>
+                                <div class="data-value">${parsed.phone || 'Not found'}</div>
+                            </div>
+                            
+                            <div class="data-item">
+                                <div class="data-label">Location:</div>
+                                <div class="data-value">${parsed.location || 'Not found'}</div>
+                            </div>
+                            
+                            <div class="data-item" style="grid-column: span 2;">
+                                <div class="data-label">Education:</div>
+                                <div class="data-value">${parsed.education || 'Not found'}</div>
+                            </div>
+                            
+                            <div class="data-item" style="grid-column: span 2;">
+                                <div class="data-label">Skills:</div>
+                                <div class="data-value">${Array.isArray(parsed.skills) ? parsed.skills.join(', ') : (parsed.skills || 'Not found')}</div>
+                            </div>
+                            
+                            <div class="data-item">
+                                <div class="data-label">Experience:</div>
+                                <div class="data-value">${parsed.experience || 'Not found'}</div>
+                            </div>
+                        </div>
+                        
+                        <div class="download-section">
+                            <button onclick="closeDetails()" class="download-btn" style="background: linear-gradient(135deg, #6c757d 0%, #495057 100%);">
+                                ← Back to Results
+                            </button>
+                        </div>
+                    `;
+                    
+                    document.getElementById('searchResults').innerHTML = html;
+                }
+            } catch (error) {
+                console.error('Error fetching resume details:', error);
+                document.getElementById('searchResults').innerHTML = `
+                    <div class="error">
+                        Error loading resume details: ${error.message}
+                    </div>
+                `;
+            }
+        }
+
+        function closeDetails() {
+            // Re-run the last search
+            searchResumes();
+        }
+
+        async function loadStats() {
+            const statsDiv = document.getElementById('statsContainer');
+            
+            try {
+                const response = await fetch('/api/resumes/stats');
+                const data = await response.json();
+                
+                let html = `
+                    <div class="stat-card">
+                        <div class="stat-label">Total Resumes</div>
+                        <div class="stat-value">${data.total_resumes || 0}</div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-label">With Names</div>
+                        <div class="stat-value">${data.fields_availability?.name || 0}</div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-label">With Emails</div>
+                        <div class="stat-value">${data.fields_availability?.email || 0}</div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-label">With Phones</div>
+                        <div class="stat-value">${data.fields_availability?.phone || 0}</div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-label">With Education</div>
+                        <div class="stat-value">${data.fields_availability?.education || 0}</div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-label">Database Health</div>
+                        <div class="stat-value" style="color: #38ef7d;">✓</div>
+                    </div>
+                `;
+                
+                statsDiv.innerHTML = html;
+            } catch (error) {
+                console.error('Error loading stats:', error);
+                statsDiv.innerHTML = `
+                    <div class="error">
+                        Error loading statistics: ${error.message}
+                    </div>
+                `;
+            }
+        }
+
+        async function loadRecentResumes() {
+            const recentDiv = document.getElementById('recentResumes');
+            
+            try {
+                const response = await fetch('/api/resumes/search', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ 
+                        query: {},
+                        limit: 5,
+                        sort: { "metadata.upload_date": -1 }
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (data.results && data.results.length > 0) {
+                    let html = '';
+                    data.results.forEach(resume => {
+                        const parsed = resume.parsed_data || {};
+                        html += `
+                            <div class="resume-item">
+                                <h4>${parsed.name || 'Unnamed Resume'}</h4>
+                                <div class="resume-meta">
+                                    ${resume.metadata?.filename || ''} • 
+                                    Uploaded ${new Date(resume.metadata?.upload_date).toLocaleDateString()}
+                                </div>
+                                <div class="data-value">
+                                    ${parsed.skills ? parsed.skills.slice(0, 3).join(', ') : ''}
+                                    ${parsed.skills && parsed.skills.length > 3 ? '...' : ''}
+                                </div>
+                            </div>
+                        `;
+                    });
+                    recentDiv.innerHTML = html;
+                } else {
+                    recentDiv.innerHTML = '<p>No resumes found in database</p>';
+                }
+            } catch (error) {
+                console.error('Error loading recent resumes:', error);
+                recentDiv.innerHTML = `
+                    <div class="error">
+                        Error loading recent resumes: ${error.message}
+                    </div>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>
